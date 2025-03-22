@@ -5,15 +5,15 @@ class PianoKey extends StatefulWidget {
   final String note;
   final VoidCallback onPress;
   final VoidCallback onRelease;
-  final bool isBlack; // 검은 건반인지 여부
+  final bool isBlack; // 검은 건반 여부
 
   const PianoKey({
-    super.key,
+    Key? key,
     required this.note,
     required this.onPress,
     required this.onRelease,
-    this.isBlack = false, // 기본적으로 흰 건반
-  });
+    this.isBlack = false,
+  }) : super(key: key);
 
   @override
   _PianoKeyState createState() => _PianoKeyState();
@@ -24,15 +24,22 @@ class _PianoKeyState extends State<PianoKey> {
 
   final AudioPlayer _player = AudioPlayer();
 
-  void playSound() {
-    String fileName = widget.note.replaceAll("#", "_sharp");
-    _player.play(AssetSource('sounds/$fileName.mp3')).then((value) {
-      // 재생 성공
-    }).catchError((error) {
+  void playSound() async {
+    String fileName = widget.note;
+    try {
+      // 현재 재생 중인 소리가 있다면 중지한 후 재생합니다.
+      await _player.stop();
+      await _player.play(AssetSource('sounds/$fileName.mp3'));
+    } catch (error) {
       print("Error playing sound: $error");
-    });
+    }
   }
 
+  @override
+  void dispose() {
+    _player.dispose(); // AudioPlayer 리소스 해제
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,18 +74,7 @@ class _PianoKeyState extends State<PianoKey> {
           border: Border.all(color: Colors.black),
           borderRadius: BorderRadius.circular(4),
         ),
-        // child: Center(
-        //   child: Text(
-        //     widget.note,
-        //     style: TextStyle(
-        //       fontSize: 18,
-        //       color: widget.isBlack ? Colors.white : Colors.black, // 검은 건반 글자는 흰색
-        //     ),
-        //   ),
-        // ),
       ),
     );
   }
 }
-
-
