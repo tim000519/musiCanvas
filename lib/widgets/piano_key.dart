@@ -69,7 +69,7 @@ class _PianoKeyState extends State<PianoKey> {
         margin: widget.isBlack ? const EdgeInsets.symmetric(horizontal: 5) : EdgeInsets.zero,
         decoration: BoxDecoration(
           color: isPressed
-              ? (widget.isBlack ? const Color.fromRGBO(155, 62, 51, 1) : const Color.fromARGB(255, 129, 51, 42))
+              ? (widget.isBlack ? const Color.fromRGBO(155, 62, 51, 1) : const Color.fromRGBO(155, 62, 51, 1))
               : (widget.isBlack ? Colors.black : const Color.fromARGB(255, 255, 251, 231)),
           border: Border.all(color: Colors.black),
           borderRadius: BorderRadius.circular(4),
