@@ -57,6 +57,10 @@ flutter:
   assets:
     - assets/sounds/
     - assets/images/grain.png
+    - assets/images/jazz.png
+    - assets/images/Rock.png
+    - assets/images/pp.png
+    - assets/images/pp2.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

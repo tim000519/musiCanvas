@@ -167,38 +167,41 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-    List<String?> blackKeys = ['C_sharp', 'D_sharp', null, 'F_sharp', 'G_sharp', 'A_sharp', null];
+    List<String> whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C_oct', 'D_oct', 'E_oct', 'F_oct', 'G_oct', 'A_oct', 'B_oct',];
+    List<String?> blackKeys = ['C_sharp', 'D_sharp', null, 'F_sharp', 'G_sharp', 'A_sharp', null, 'C_sharp_oct', 'D_sharp_oct', null, 'F_sharp_oct', 'G_sharp_oct', 'A_sharp_oct', null];
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        // color: Colors.white,
         image: DecorationImage(
-          image: AssetImage('assets/images/grain.png'),
-          repeat: ImageRepeat.repeat,
+          image: AssetImage('assets/images/pp2.png'),
+          // repeat: ImageRepeat.repeat,
+          fit: BoxFit.cover,
           // opacity를 조절해 질감이 너무 두드러지지 않도록 조정
-          opacity: 0.05,
+          opacity: 0.5,
         ),
       ),
 
       child: Scaffold(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        // backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color.fromRGBO(91, 70, 54, 1), /// 맨 위, 갈색
           elevation: 2,
           leading: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Icon(Icons.music_note, color: Colors.blue, size: 30),
+            child: Icon(Icons.music_note, color: Color.fromARGB(255, 255, 251, 231), size: 30),
           ),
           title: const Text(
-            'Melody Maker',
+            'Music Canvas',
             style: TextStyle(
-              color: Colors.black87,
+              color: Color.fromARGB(255, 255, 251, 231),
               fontWeight: FontWeight.bold,
             ),
           ),
           centerTitle: true,
         ),
+
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -224,11 +227,12 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 // 피아노 건반 영역
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: LayoutBuilder(
@@ -334,7 +338,7 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                 Container(
                   height: 150,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   margin: EdgeInsets.only(bottom: 16),
@@ -345,6 +349,7 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                 ),
                 // 장르 & 악기 선택 영역
                 Card(
+                  color: const Color.fromARGB(255, 255, 255, 255),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -362,25 +367,50 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                               "장르 선택",
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
-                            ToggleButtons(
-                              borderRadius: BorderRadius.circular(8),
-                              isSelected: [
-                                selectedGenre == "JAZZ",
-                                selectedGenre == "ROCK",
-                              ],
-                              onPressed: (index) {
-                                setState(() {
-                                  selectedGenre = index == 0 ? "JAZZ" : "ROCK";
-                                });
-                              },
-                              children: const [
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text("JAZZ"),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedGenre = "JAZZ";
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: selectedGenre == "JAZZ" ? Color.fromRGBO(159, 79, 70, 1) : Colors.transparent,
+                                        width: 5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.asset(
+                                      'assets/images/jazz.png',
+                                      width: 80,
+                                      height: 80,
+                                    ),
+                                  ),
                                 ),
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text("ROCK"),
+                                const SizedBox(width: 16),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedGenre = "ROCK";
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: selectedGenre == "ROCK" ? Color.fromRGBO(159, 79, 70, 1) : Colors.transparent,
+                                        width: 5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Image.asset(
+                                      'assets/images/Rock.png',
+                                      width: 80,
+                                      height: 80,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -407,7 +437,7 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                                         selectedInstruments[instrument] = selected;
                                       });
                                     },
-                                    selectedColor: Colors.blue.shade200,
+                                    selectedColor: Color.fromRGBO(159, 79, 70, 1),
                                     checkmarkColor: Colors.white,
                                   ),
                                 );
