@@ -17,10 +17,10 @@ class SheetMusicPainter extends CustomPainter {
 
   // 음표 이름을 y좌표로 매핑 (간단 예제)
   double noteToY(String note) {
-    const notesOrder = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    const notesOrder = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C_oct', 'D_oct', 'E_oct', 'F_oct', 'G_oct', 'A_oct', 'B_oct',];
     int index = notesOrder.indexOf(note);
     if (index == -1) index = 0;
-    return staffTop + 1.5 * staffSpacing - index * staffSpacing * 0.5;
+    return staffTop + 35 + 1.5 * staffSpacing - index * staffSpacing * 0.5;
   }
 
   @override

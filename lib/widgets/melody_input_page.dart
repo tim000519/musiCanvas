@@ -50,47 +50,67 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
   };
 
   // 3초 카운트다운 후 녹음 시작
-  void startCountdownAndRecording() {
-    setState(() {
-      countdown = 3;
-    });
-    Timer.periodic(Duration(seconds: 1), (Timer timer) {
-      if (countdown > 0) {
+ void startRecording() {
+  countdown = 3;
+  const int metronomeIntervalMs = 500;
+
+  int tick = 0;
+  int totalCountdownTicks = countdown * 2; // 0.5초 단위
+  int maxTicks = totalCountdownTicks + totalBeats; // 전체 녹음까지 포함
+
+  setState(() {
+    countdown = countdown;
+    isRecording = false;
+    currentBeat = 0;
+    recordedNotes.clear();
+    activeNotes.clear();
+    recordingStartTime = null;
+  });
+
+  metronomeTimer = Timer.periodic(
+    const Duration(milliseconds: metronomeIntervalMs),
+    (timer) {
+      // 항상 메트로놈 소리 재생
+      _metronomePlayer
+          .play(AssetSource('sounds/met.mp3'))
+          .catchError((error) => print("Metronome error: $error"));
+
+      // 카운트다운 중
+      if (tick < totalCountdownTicks) {
+        if (tick % 2 == 1) {
+          setState(() {
+            countdown--;
+          });
+        }
+      }
+
+      // 카운트다운 종료 직후 → 녹음 시작
+      else if (tick == totalCountdownTicks) {
         setState(() {
-          countdown--;
-        });
-      } else {
-        timer.cancel();
-        setState(() {
+          isRecording = true;
+          recordingStartTime = DateTime.now();
           countdown = -1;
         });
-        startRecording(); // 카운트다운 종료 후 녹음 시작
       }
-    });
-  }
 
-  void startRecording() {
-    setState(() {
-      isRecording = true;
-      currentBeat = 0;
-      recordedNotes.clear();
-      activeNotes.clear();
-      recordingStartTime = DateTime.now();
-    });
+      // 녹음 중
+      else {
+        setState(() {
+          currentBeat++;
+        });
 
-    metronomeTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      _metronomePlayer.play(AssetSource('sounds/met.mp3')).catchError((error) {
-        print("Metronome error: $error");
-      });
-      setState(() {
-        currentBeat++;
-      });
-      if (currentBeat >= totalBeats) {
-        stopRecording();
+        if (currentBeat >= totalBeats) {
+          timer.cancel();
+          setState(() {
+            isRecording = false;
+          });
+        }
       }
-    });
-  }
 
+      tick++;
+    },
+  );
+}
   void stopRecording() {
     metronomeTimer?.cancel();
     setState(() {
@@ -197,6 +217,7 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
             style: TextStyle(
               color: Color.fromARGB(255, 255, 251, 231),
               fontWeight: FontWeight.bold,
+              fontSize: 25
             ),
           ),
           centerTitle: true,
@@ -205,169 +226,189 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              children: [
-                // 카운트다운 / 녹음 상태 표시 영역
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      countdown > -1
-                          ? '시작까지 $countdown초'
-                          : isRecording
-                              ? 'Recording... Beat ${currentBeat + 1}/$totalBeats'
-                              : '녹음을 시작하려면 \'멜로디 작곡\' 버튼을 누르세요',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 피아노 건반 영역
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      double whiteKeyWidth = 50;
-                      double blackKeyWidth = whiteKeyWidth * 0.85;
-                      return Stack(
-                        children: [
-                          // 흰 건반s
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: whiteKeys.map((note) {
-                              return SizedBox(
-                                width: whiteKeyWidth,
-                                child: PianoKey(
-                                  note: note,
-                                  onPress: () => onKeyPress(note),
-                                  onRelease: () => onKeyRelease(note),
-                                  isBlack: false,
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          // 검은 건반 (흰 건반 위에 오버레이)
-                          Positioned.fill(
-                            child: Padding(
-                              padding: EdgeInsets.only(left: whiteKeyWidth),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: blackKeys.map((note) {
-                                  return note != null
-                                      ? SizedBox(
-                                          width: whiteKeyWidth,
-                                          child: Align(
-                                            alignment: Alignment.topCenter,
-                                            child: SizedBox(
-                                              width: blackKeyWidth,
-                                              height: 100,
-                                              child: PianoKey(
-                                                note: note,
-                                                onPress: () => onKeyPress(note),
-                                                onRelease: () => onKeyRelease(note),
-                                                isBlack: true,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : SizedBox(width: whiteKeyWidth);
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // 컨트롤 버튼들
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 2000),
+                child: Column(
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (isRecording) {
-                          stopRecording();
-                        } else {
-                          startCountdownAndRecording();
-                        }
-                      },
-                      icon: isRecording
-                          ? const Icon(Icons.stop)
-                          : const Icon(Icons.fiber_manual_record),
-                      label: Text(isRecording ? '멈춤' : '멜로디 작곡'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    // 카운트다운 / 녹음 상태 표시 영역
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          countdown > -1
+                              ? 'Get ready! Starting in ${countdown} seconds...'
+                              : isRecording
+                                  ? 'Recording... Beat ${(currentBeat) ~/ 2}/16'
+                                  : 'To start recording, press START.',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color.fromARGB(153, 0, 0, 0),),
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // 녹음된 노트 리스트
-                // Container(
-                //   width: double.infinity,
-                //   padding: const EdgeInsets.all(16),
-                //   decoration: BoxDecoration(
-                //     color: Colors.grey.shade50,
-                //     borderRadius: BorderRadius.circular(12),
-                //   ),
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: recordedNotes
-                //         .map((e) => Text(
-                //             'Note ${e.note}: start ${e.startTime.toStringAsFixed(2)} s, duration ${e.duration.toStringAsFixed(2)} s'))
-                //         .toList(),
-                //   ),
-                // ),
-                const SizedBox(height: 16),
-                // 악보 미리보기 영역
-                Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: CustomPaint(
-                    painter: SheetMusicPainter(notes: recordedNotes),
-                    child: Container(),
-                  ),
-                ),
-                // 장르 & 악기 선택 영역
-                Card(
-                  color: const Color.fromARGB(255, 255, 255, 255),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 3,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+                    const SizedBox(height: 16),
+
+                    // 피아노 건반 영역
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 255, 255, 255),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          double whiteKeyWidth = 50;
+                          double blackKeyWidth = whiteKeyWidth * 0.85;
+                          return Stack(
+                            children: [
+                              // 흰 건반s
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: whiteKeys.map((note) {
+                                  return SizedBox(
+                                    width: whiteKeyWidth,
+                                    child: PianoKey(
+                                      note: note,
+                                      onPress: () => onKeyPress(note),
+                                      onRelease: () => onKeyRelease(note),
+                                      isBlack: false,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              // 검은 건반 (흰 건반 위에 오버레이)
+                              Positioned.fill(
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: whiteKeyWidth),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: blackKeys.map((note) {
+                                      return note != null
+                                          ? SizedBox(
+                                              width: whiteKeyWidth,
+                                              child: Align(
+                                                alignment: Alignment.topCenter,
+                                                child: SizedBox(
+                                                  width: blackKeyWidth,
+                                                  height: 100,
+                                                  child: PianoKey(
+                                                    note: note,
+                                                    onPress: () => onKeyPress(note),
+                                                    onRelease: () => onKeyRelease(note),
+                                                    isBlack: true,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : SizedBox(width: whiteKeyWidth);
+                                    }).toList(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // 컨트롤 버튼들
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        // 장르 선택
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "장르 선택",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            if (isRecording) {
+                              stopRecording();
+                            } else {
+                              startRecording();
+                            }
+                          },
+                          icon: isRecording
+                              ? const Icon(Icons.stop)
+                              : const Icon(Icons.fiber_manual_record),
+                          label: Text(isRecording ? 'STOP' : 'START'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // 녹음된 노트 리스트
+                    // Container(
+                    //   width: double.infinity,
+                    //   padding: const EdgeInsets.all(16),
+                    //   decoration: BoxDecoration(
+                    //     color: Colors.grey.shade50,
+                    //     borderRadius: BorderRadius.circular(12),
+                    //   ),
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: recordedNotes
+                    //         .map((e) => Text(
+                    //             'Note ${e.note}: start ${e.startTime.toStringAsFixed(2)} s, duration ${e.duration.toStringAsFixed(2)} s'))
+                    //         .toList(),
+                    //   ),
+                    // ),
+                    const SizedBox(height: 16),
+                    // 악보 미리보기 영역
+                    Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 255, 255, 255),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: EdgeInsets.only(bottom: 16),
+                      child: CustomPaint(
+                        painter: SheetMusicPainter(notes: recordedNotes),
+                        child: Container(),
+                      ),
+                    ),
+                    // 장르 & 악기 선택 영역
+                    Card(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 0),
                             Row(
+                              children: const [
+                                Expanded(child: Divider(thickness: 1.5)),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text(
+                                    '▼ Select Genre ▼',
+                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
+                                  ),
+                                ),
+                                Expanded(child: Divider(thickness: 1.5)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+                            // 장르 선택 이미지 버튼
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 GestureDetector(
                                   onTap: () {
@@ -379,14 +420,18 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                                     decoration: BoxDecoration(
                                       border: Border.all(
                                         color: selectedGenre == "JAZZ" ? Color.fromRGBO(159, 79, 70, 1) : Colors.transparent,
-                                        width: 5,
+                                        width: 4,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    child: Image.asset(
-                                      'assets/images/jazz.png',
-                                      width: 80,
-                                      height: 80,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.asset(
+                                        'assets/images/jazz.png',
+                                        width: 150,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -401,78 +446,106 @@ class _MelodyInputPageState extends State<MelodyInputPage> {
                                     decoration: BoxDecoration(
                                       border: Border.all(
                                         color: selectedGenre == "ROCK" ? Color.fromRGBO(159, 79, 70, 1) : Colors.transparent,
-                                        width: 5,
+                                        width: 4,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    child: Image.asset(
-                                      'assets/images/Rock.png',
-                                      width: 80,
-                                      height: 80,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.asset(
+                                        'assets/images/Rock.png',
+                                        width: 150,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // 악기 선택
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "악기 선택",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
+                            const SizedBox(height: 24),
                             Row(
+                              children: const [
+                                Expanded(child: Divider(thickness: 1.5)),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text(
+                                    '▼ Select Instruments ▼',
+                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black54),
+                                  ),
+                                ),
+                                Expanded(child: Divider(thickness: 1.5)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            // 악기 선택 이미지 버튼
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: selectedInstruments.keys.map((instrument) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: FilterChip(
-                                    label: Text(instrument),
-                                    selected: selectedInstruments[instrument]!,
-                                    onSelected: (bool selected) {
-                                      setState(() {
-                                        selectedInstruments[instrument] = selected;
-                                      });
-                                    },
-                                    selectedColor: Color.fromRGBO(159, 79, 70, 1),
-                                    checkmarkColor: Colors.white,
+                                final isSelected = selectedInstruments[instrument]!;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedInstruments[instrument] = !isSelected;
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color.fromRGBO(159, 79, 70, 1)
+                                              : Colors.transparent,
+                                          width: 4,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.asset(
+                                          'assets/images/${instrument.toLowerCase()}.png',
+                                          width: 200,
+                                          height: 200,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 );
                               }).toList(),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                //악보 처리 및 다운로드
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        List<dynamic> genreParam = [
-                          selectedGenre,
-                          ...selectedInstruments.entries.map((e) => {e.key: e.value})
-                        ];
-                        downloadMidiFile(context, recordedNotes, genreParam);
-                      },
-                      icon: const Icon(Icons.download),
-                      label: const Text('악보 처리 및 다운로드'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
                       ),
+                    ),
+                    //악보 처리 및 다운로드
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            List<dynamic> genreParam = [
+                              selectedGenre,
+                              ...selectedInstruments.entries.map((e) => {e.key: e.value})
+                            ];
+                            downloadMidiFile(context, recordedNotes, genreParam);
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Generate & Download'
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

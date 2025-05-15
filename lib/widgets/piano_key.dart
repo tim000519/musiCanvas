@@ -63,16 +63,31 @@ class _PianoKeyState extends State<PianoKey> {
         });
         widget.onRelease();
       },
-      child: Container(
-        width: widget.isBlack ? 30 : 50, // 검은 건반은 더 좁게
-        height: widget.isBlack ? 100 : 150, // 검은 건반은 더 짧게
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        transform: isPressed
+            ? Matrix4.translationValues(0, 5, 0) // 눌렀을 때 아래로 살짝 이동
+            : Matrix4.identity(),
+        width: widget.isBlack ? 30 : 50,
+        height: widget.isBlack ? 100 : 150,
         margin: widget.isBlack ? const EdgeInsets.symmetric(horizontal: 5) : EdgeInsets.zero,
         decoration: BoxDecoration(
           color: isPressed
-              ? (widget.isBlack ? const Color.fromRGBO(155, 62, 51, 1) : const Color.fromRGBO(155, 62, 51, 1))
-              : (widget.isBlack ? Colors.black : const Color.fromARGB(255, 255, 251, 231)),
+              ? const Color.fromRGBO(155, 62, 51, 1)
+              : (widget.isBlack
+                  ? Colors.black
+                  : const Color.fromARGB(255, 255, 251, 231)),
           border: Border.all(color: Colors.black),
           borderRadius: BorderRadius.circular(4),
+          boxShadow: isPressed
+              ? [] // 눌렀을 때는 그림자 제거 (눌림 느낌)
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    offset: const Offset(2, 4),
+                    blurRadius: 4,
+                  ),
+                ],
         ),
       ),
     );
